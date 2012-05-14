@@ -139,6 +139,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private boolean analogControlsEnabled;
 	private boolean firing;
 	private CircleParticleEmitter bulletsEmitter;
+	private SpriteParticleSystem bulletsParticleSystem;
+	private Sprite fireBtn;
+
 	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -172,14 +175,14 @@ public class MainActivity extends SimpleBaseGameActivity {
 		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 		
 		try {
-			this.mAttackSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "fast-attack.ogg");
-			this.mExplosionSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "explosion.ogg");
+			this.mAttackSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "MachineGun2.ogg");
+			this.mExplosionSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "Canon.ogg");
 		} 
 		catch (final IOException e) 
 		{
 			Debug.e(e);
 		}		
-
+ 
 		this.mBitmapTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(), 512, 512);
 		
 		this.heroTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "ship.png");
@@ -213,17 +216,17 @@ public class MainActivity extends SimpleBaseGameActivity {
 
 		//this.mEngine.registerUpdateHandler(new FPSLogger());
 		scene = getScene1();
-		getHero();
-		createBg();
-		scene.attachChild(hero);
-		createStars();
+		createHero();
+		createBg();		
+		createPropulsionSmoke();
 		createBullets();
 		createBg();
 		createFireButton();		
+		createCannonButton();
 		
 		mEngine.registerUpdateHandler(heroMovingTimer);
 		mEngine.registerUpdateHandler(enemiesCreationTimer);
-		scene.registerUpdateHandler(timerBullets);
+		mEngine.registerUpdateHandler(timerBullets);
 		
 		scene.setTouchAreaBindingOnActionDownEnabled(true);
 		
@@ -232,13 +235,41 @@ public class MainActivity extends SimpleBaseGameActivity {
 	
 	private void createFireButton(){
 		//Fire Button
-				final Sprite fireBtn = new ButtonSprite(cameraWidth - 50,cameraHeight - 50, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), fireBtnHandler);
+				fireBtn = new Sprite(cameraWidth - 130,cameraHeight - 70, this.fireButtonTextureRegion, this.getVertexBufferObjectManager()){
+
+					@Override
+					public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
+						if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_DOWN)
+						{
+							firing = true;
+							bulletsParticleSystem.setParticlesSpawnEnabled(true);
+						}
+						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP ){
+							firing = false;
+							bulletsParticleSystem.setParticlesSpawnEnabled(false);
+						} 
+						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE ){
+							firing = false;
+							bulletsParticleSystem.setParticlesSpawnEnabled(false);
+						}
+						return super.onAreaTouched(pSceneTouchEvent, pTouchAreaLocalX, pTouchAreaLocalY);
+					}
+					
+				};
 				 
 				fireBtn.setZIndex(CONTROLS_LAYER);  
 				scene.registerTouchArea(fireBtn);
 				scene.attachChild(fireBtn);
 	}
 
+	private void createCannonButton(){
+		//Fire Button
+				final Sprite fireBtn = new ButtonSprite(cameraWidth - 90,cameraHeight - 120, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), cannonBtnHandler);
+				 
+				fireBtn.setZIndex(CONTROLS_LAYER);  
+				scene.registerTouchArea(fireBtn);
+				scene.attachChild(fireBtn);
+	}
 
 	private void createBg() {
 		
@@ -249,10 +280,14 @@ public class MainActivity extends SimpleBaseGameActivity {
 		scene.setBackground(autoParallaxBackground);
 	}
 
-	public void playExplosion() {
+	public void playMachineGun() {
 		mAttackSound.play();
 	}
 
+	public void playCanon() {
+		mExplosionSound.play();
+	}
+	
 	PathModifier.IPathModifierListener pathListener = new PathModifier.IPathModifierListener() {
 		@Override
 		public void onPathStarted(final PathModifier pPathModifier,
@@ -279,7 +314,6 @@ public class MainActivity extends SimpleBaseGameActivity {
 		}
 	};
 
-
 	public float getLookFowardRotation(float toX, float toY, float fromX, float fromY)
 	{		
 		    double angle = Math.toDegrees(Math.atan2(toY - fromY, toX - fromX))*180/Math.PI;
@@ -287,7 +321,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		    return  (float) angle;
 	 }
 	
-	public Sprite getHero()
+	public void createHero()
 	{
 		hero = new Sprite(cameraWidth / 3, cameraHeight / 2, heroTextureRegion, getVertexBufferObjectManager());
 		hero.setRotation(-90);
@@ -313,8 +347,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 		{
 			//createFullTouchControl();
 		}
+		scene.attachChild(hero);
 		
-		return hero;
 	}
 	
 	private void createFullTouchControl() {
@@ -351,7 +385,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 					{
 						
 						inicialTouchPosition = new float[]{pSceneTouchEvent.getX(), pSceneTouchEvent.getY()};
-						
+
 						
 							diferencialX = (float) (pSceneTouchEvent.getX() - antigoTouchX);
 							diferencialY = (float) (pSceneTouchEvent.getY() - antigoTouchY);
@@ -422,17 +456,63 @@ public class MainActivity extends SimpleBaseGameActivity {
 	public 	OnClickListener fireBtnHandler = new OnClickListener() {
 
 		@Override
-		public void onClick(ButtonSprite pButtonSprite,	float pTouchAreaLocalX, float pTouchAreaLocalY) {
+		public void onClick(final ButtonSprite pButtonSprite,	float pTouchAreaLocalX, float pTouchAreaLocalY) {
 			
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
+		
+					if(pButtonSprite.isPressed())
+					{
+						firing = true;
+						bulletsParticleSystem.setParticlesSpawnEnabled(true);
+					}
+					else{
+						firing = false;
+						bulletsParticleSystem.setParticlesSpawnEnabled(false);
+					}
+//					final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 20, 2,	mainAc.getVertexBufferObjectManager());
+//					rect.setX(hero.getX());
+//					rect.setY(hero.getY());
+//					rect.setZIndex(ENEMY_LAYER);
+//					rect.setColor(Color.RED);
+//
+//					bullets.add(rect);
+//					scene.attachChild(rect);
+//					scene.registerUpdateHandler(new IUpdateHandler() {
+//						@Override
+//						public void reset(){}
+//
+//						@Override
+//						public void onUpdate(final float pSecondsElapsed)
+//						{
+//							rect.setX(rect.getX() + 7.5f);	
+//						}
+//					});
+//					playCanon();
+			
 
+		}
+	};
+
+	// Canon Button Handler
+	public 	OnClickListener cannonBtnHandler = new OnClickListener() {
+
+		@Override
+		public void onClick(final ButtonSprite pButtonSprite,	float pTouchAreaLocalX, float pTouchAreaLocalY) {
+			
+		
+					if(pButtonSprite.getState() == ButtonSprite.State.PRESSED)
+					{
+						
+					}
+					if(scene.hasChildScene()){
+						scene.clearChildScene();
+						//TODO Implementar "unpause"
+						//pauseBtn.setVisible(true);
+					}
 					final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 20, 2,	mainAc.getVertexBufferObjectManager());
-					rect.setX(hero.getX());
-					rect.setY(hero.getY());
+					rect.setX(hero.getX()+10);
+					rect.setY(hero.getY()+16);
 					rect.setZIndex(ENEMY_LAYER);
-					rect.setColor(Color.RED);
+					rect.setColor(Color.CYAN);
 
 					bullets.add(rect);
 					scene.attachChild(rect);
@@ -446,14 +526,13 @@ public class MainActivity extends SimpleBaseGameActivity {
 							rect.setX(rect.getX() + 7.5f);	
 						}
 					});
-					playExplosion();
-				}
-			});
+					playCanon();
+			
 
 		}
 	};
 
-
+	
 	
 	public float angleBetween2Lines(float x1, float y1, float x2, float y2)
 	{
@@ -462,8 +541,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 	    return (float)(angle1 - angle2);
 	}
 	
-	
-	public void createStars()
+	public void createPropulsionSmoke()
 	{
 		
 		emitter = new CircleParticleEmitter(0, 0, 2);
@@ -482,28 +560,24 @@ public class MainActivity extends SimpleBaseGameActivity {
 		scene.attachChild(starsParticleSystem);
 	}
 	
-	
-	
-	
-public void createBullets()
+	public void createBullets()
 	{
 		
 		bulletsEmitter = new CircleParticleEmitter(0, 0, 2);
-		starsParticleSystem = new SpriteParticleSystem(bulletsEmitter, RATE_MIN, RATE_MAX, PARTICLES_MAX, this.fumacaTextureRegion, this.getVertexBufferObjectManager());
-		starsParticleSystem.addParticleInitializer(new BlendFunctionParticleInitializer<Sprite>(GLES10.GL_SRC_ALPHA, GLES10.GL_ONE));//(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE));
-		starsParticleSystem.addParticleInitializer(new VelocityParticleInitializer<Sprite>(75, 75, 0, 0));
-		starsParticleSystem.addParticleInitializer(new AccelerationParticleInitializer<Sprite>(5, 0));
-		//particleSystem.addParticleInitializer(new RotationParticleInitializer<Sprite>(0.0f, 360.0f));
-		starsParticleSystem.addParticleInitializer(new ColorParticleInitializer<Sprite>(Color.RED));
-		starsParticleSystem.addParticleInitializer(new ExpireParticleInitializer<Sprite>(6.5f));
-
+		bulletsParticleSystem = new SpriteParticleSystem(bulletsEmitter, RATE_MIN, RATE_MAX, PARTICLES_MAX, this.fumacaTextureRegion, this.getVertexBufferObjectManager());
+		//bulletsParticleSystem.addParticleInitializer(new BlendFunctionParticleInitializer<Sprite>(GLES10.GL_SRC_ALPHA, GLES10.GL_ONE));//(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE));
+		bulletsParticleSystem.addParticleInitializer(new VelocityParticleInitializer<Sprite>(175, 175, 0, 0));
+		//bulletsParticleSystem.addParticleInitializer(new AccelerationParticleInitializer<Sprite>(5, 0));
+		//bulletsParticleSystem.addParticleInitializer(new RotationParticleInitializer<Sprite>(0.0f, 360.0f));
+		bulletsParticleSystem.addParticleInitializer(new ColorParticleInitializer<Sprite>(Color.RED));
+		bulletsParticleSystem.addParticleInitializer(new ExpireParticleInitializer<Sprite>(4.5f));
+		bulletsParticleSystem.setParticlesSpawnEnabled(false);
 		//starsParticleSystem.addParticleModifier(new ScaleParticleModifier<Sprite>(0, 5, 0.5f, 2.0f));
 		//particleSystem.addParticleModifier(new ColorParticleModifier<Sprite>(2.5f, 5.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f));
 		//starsParticleSystem.addParticleModifier(new AlphaParticleModifier<Sprite>(0f, 1.5f, 1.0f, 0.0f));
 		
-		scene.attachChild(starsParticleSystem);
+		scene.attachChild(bulletsParticleSystem);
 	}
-	
 	
 	public void createAnalogControl()
 	{
@@ -525,8 +599,6 @@ public void createBullets()
 
 		scene.setChildScene(velocityOnScreenControl);
 	}
-
-	
 
 	public boolean onLeftTouchEvent(TouchEvent pSceneTouchEvent) {
 		
@@ -589,13 +661,15 @@ public void createBullets()
 		}
 		else
 		{
-			if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_DOWN ) 
+			if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP || pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE) 
 			{
-				firing = true;
+				//firing = false;
+				//bulletsParticleSystem.setParticlesSpawnEnabled(false);
 			}
-			else if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP || pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE) 
+			else
 			{
-				firing = false;
+				//firing = true;
+				//bulletsParticleSystem.setParticlesSpawnEnabled(true);
 			}
 			
 		}
@@ -604,7 +678,22 @@ public void createBullets()
 
 	}// END onSceneTouchEvent
 	
-	Timer enemiesCreationTimer = new Timer(2, new Timer.ITimerCallback() {
+	public void removeEnemies()
+	{
+		for (Sprite enemy : enemies) {
+			if (enemy.getX() < -enemy.getWidth()) {
+				enemy.detachSelf();
+				enemies.remove(enemy);
+				enemy = null;
+				removeEnemies();
+				break;
+			}
+		}
+	}
+	
+	public Timer enemiesCreationTimer = new Timer(2, new Timer.ITimerCallback() {
+
+		private Sprite newEnemy;
 
 		@Override
 		public void onTick() {
@@ -626,7 +715,7 @@ public void createBullets()
 				inimigo = enemy1TextureRegion;
 				break;
 			}
-
+			
 			final Sprite newEnemy = new Sprite(centerX, centerY, inimigo,getVertexBufferObjectManager());				
 			newEnemy.setZIndex(ENEMY_LAYER);
 			newEnemy.setRotation(90);
@@ -636,14 +725,7 @@ public void createBullets()
 			scene.registerTouchArea(newEnemy);
 			scene.attachChild(newEnemy);
 			
-			for (Sprite enemy : enemies) {
-				if (enemy.getX() < -enemy.getWidth()) {
-					enemy.detachSelf();
-					enemies.remove(enemy);
-					// spriteB = null;
-					return;
-				}
-			}
+			//removeEnemies();
 			
 			scene.registerUpdateHandler(new IUpdateHandler() {
 				@Override
@@ -654,29 +736,24 @@ public void createBullets()
 				public void onUpdate(final float pSecondsElapsed) {
 					
 					//Movendo Inimigos
+					if(newEnemy != null)
 					newEnemy.setX(newEnemy.getX() - 5.5f);
-
-					for (Sprite spriteB : enemies) {
+					if (newEnemy != null && newEnemy.collidesWith(hero) || newEnemy.getX() < -20) {
+						newEnemy.detachSelf();
+						enemies.remove(newEnemy);	
 						
-						if (spriteB.collidesWith(hero)) {
-
-							spriteB.detachSelf();
-							enemies.remove(spriteB);
-							spriteB = null;
-							return;
-						}
 					}
 				}
 			});
-		}
+		}//end onTick()
 	});
 
-	
 	//OnEnterFrame timed
 	Timer heroMovingTimer = new Timer(0.023f, new Timer.ITimerCallback() {
-
+		
 		@Override
 		public void onTick() {
+			detectCollisions();
 			//Movendo o heroi
 			if(pitchSpeed)
 			{
@@ -708,32 +785,43 @@ public void createBullets()
 		}
 	});
 	
-	
 	Timer timerBullets = new Timer(0.5f, new Timer.ITimerCallback() {
 		@Override
 		public void onTick() {						
 			
+			
 			if(firing)
 			{
-				final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 20, 2,	mainAc.getVertexBufferObjectManager());
-				rect.setX(hero.getX());
+				final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 8, 2,	mainAc.getVertexBufferObjectManager());
+				rect.setX(hero.getX()+10);
 				rect.setY(hero.getY());
 				rect.setZIndex(ENEMY_LAYER);
 				rect.setColor(Color.RED);
-
+				final Rectangle rect2 = new Rectangle(newX, newY	- diferencialY, 8, 2,	mainAc.getVertexBufferObjectManager());
+				rect2.setX(hero.getX()+10);
+				rect2.setY(hero.getY()+32);
+				rect2.setZIndex(ENEMY_LAYER);
+				rect2.setColor(Color.RED);
+				
+				
 				bullets.add(rect);
+				
+				bullets.add(rect2);
 				scene.attachChild(rect);
+				scene.attachChild(rect2);
+				
 				scene.registerUpdateHandler(new IUpdateHandler() {
 					@Override
-					public void reset(){}
+					public void reset(){} 
 
 					@Override
 					public void onUpdate(final float pSecondsElapsed)
 					{
 						rect.setX(rect.getX() + 7.5f);	
+						rect2.setX(rect2.getX() + 7.5f);	
 					}
 				});
-				playExplosion();
+				playMachineGun();
 			}
 			
 			for (Rectangle spriteB : bullets) {
@@ -754,5 +842,37 @@ public void createBullets()
 			}
 		}
 	});
+	
+	
+	
+	public void detectCollisions()
+	{
+		enemiesfor:
+		for(int i = 0; i <enemies.size();i++)
+		{
+			if(enemies.get(i).hasParent())
+			{
+				bulletsfor:
+				for(int j = 0; j < bullets.size();j++)
+				{
+					//if(bullets.get(j).hasParent() & MathUtils.distance(bullets.get(j).getX(), bullets.get(j).getY(), enemies.get(i).getX(), enemies.get(i).getY()) <= enemies.get(i).getWidth() * 1.4)
+					//{
+						if(enemies.get(i).collidesWith(bullets.get(j)))
+						{
+							//Se atingiu, remove a bala
+							bullets.get(j).detachSelf();
+							bullets.remove(bullets.get(j));
+							//e a nave inimiga
+							enemies.get(i).detachSelf();
+							enemies.remove(enemies.get(i));
+							
+							return;							
+						}
+					//}
+				}
+			}
+		}
+	}
+	 
 	
 }
