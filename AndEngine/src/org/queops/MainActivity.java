@@ -40,12 +40,16 @@ import org.andengine.entity.scene.background.ParallaxBackground.ParallaxEntity;
 import org.andengine.entity.sprite.ButtonSprite;
 import org.andengine.entity.sprite.ButtonSprite.OnClickListener;
 import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.text.Text;
+import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.examples.adt.card.Card;
 import org.andengine.extension.customTimer.Timer;
 import org.andengine.extension.physics.box2d.PhysicsWorld;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.input.touch.controller.MultiTouch;
+import org.andengine.opengl.font.FontFactory;
+import org.andengine.opengl.font.IFont;
 import org.andengine.opengl.texture.Texture;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -62,6 +66,7 @@ import org.andengine.opengl.util.GLHelper;
 import org.andengine.opengl.vbo.DrawType;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
+import org.andengine.util.HorizontalAlign;
 import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 import org.andengine.util.math.MathUtils;
@@ -69,6 +74,7 @@ import org.andengine.util.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 
+import android.graphics.Typeface;
 import android.opengl.GLES10;
 import android.opengl.GLES20;
 import android.view.MotionEvent;
@@ -141,6 +147,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private CircleParticleEmitter bulletsEmitter;
 	private SpriteParticleSystem bulletsParticleSystem;
 	private Sprite fireBtn;
+	private IFont mFont;
+	private Integer score = new Integer(1);
+	private Text placarText;
 
 	
 	@Override
@@ -173,7 +182,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 
 		SoundFactory.setAssetBasePath("mfx/");
 		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
-		
+		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, Typeface.create(Typeface.DEFAULT, Typeface.BOLD),32, Color.WHITE_ABGR_PACKED_INT);
+		this.mFont.load();
 		try {
 			this.mAttackSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "MachineGun2.ogg");
 			this.mExplosionSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "Canon.ogg");
@@ -223,6 +233,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		createBg();
 		createFireButton();		
 		createCannonButton();
+		createPlacar();
 		
 		mEngine.registerUpdateHandler(heroMovingTimer);
 		mEngine.registerUpdateHandler(enemiesCreationTimer);
@@ -739,9 +750,17 @@ public class MainActivity extends SimpleBaseGameActivity {
 					if(newEnemy != null)
 					newEnemy.setX(newEnemy.getX() - 5.5f);
 					if (newEnemy != null && newEnemy.collidesWith(hero) || newEnemy.getX() < -20) {
-						newEnemy.detachSelf();
-						enemies.remove(newEnemy);	
 						
+						if (newEnemy != null && newEnemy.collidesWith(hero) && newEnemy.hasParent() )
+						{
+							if(score > 0)
+							{
+								score = score-1;
+								placarText.setText(score.toString());
+							}
+						}
+						newEnemy.detachSelf();
+						enemies.remove(newEnemy);						
 					}
 				}
 			});
@@ -842,6 +861,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 			}
 		}
 	});
+
 	
 	
 	
@@ -865,7 +885,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 							//e a nave inimiga
 							enemies.get(i).detachSelf();
 							enemies.remove(enemies.get(i));
-							
+							score++;
+							placarText.setText(score.toString());
 							return;							
 						}
 					//}
@@ -874,5 +895,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 		}
 	}
 	 
-	
+	public void createPlacar()
+	{
+		
+		placarText = new Text(20, 10, this.mFont, "0", 30, new TextOptions(HorizontalAlign.CENTER), getVertexBufferObjectManager());
+		//placarText.setColor(Color.WHITE);
+		scene.attachChild(placarText);
+	}
 }
