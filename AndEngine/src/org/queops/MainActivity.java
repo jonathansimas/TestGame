@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.andengine.entity.scene.menu.MenuScene.IOnMenuItemClickListener;
-import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.audio.sound.Sound;
 import org.andengine.audio.sound.SoundFactory;
 import org.andengine.engine.camera.Camera;
@@ -16,9 +14,6 @@ import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
-import org.andengine.entity.Entity;
-import org.andengine.entity.IEntity;
-import org.andengine.entity.modifier.PathModifier;
 import org.andengine.entity.particle.SpriteParticleSystem;
 import org.andengine.entity.particle.emitter.CircleParticleEmitter;
 import org.andengine.entity.particle.initializer.AccelerationParticleInitializer;
@@ -33,6 +28,8 @@ import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.AutoParallaxBackground;
 import org.andengine.entity.scene.background.ParallaxBackground.ParallaxEntity;
 import org.andengine.entity.scene.menu.MenuScene;
+import org.andengine.entity.scene.menu.MenuScene.IOnMenuItemClickListener;
+import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.entity.scene.menu.item.SpriteMenuItem;
 import org.andengine.entity.sprite.ButtonSprite;
 import org.andengine.entity.sprite.ButtonSprite.OnClickListener;
@@ -200,11 +197,8 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		this.newGameButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"newGameButton.png", 1, 1);
 		this.pauseButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"playerPause.png", 1, 1);
 		
-		//Textura "transparente"
 		this.nullPixelTexture = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "nullpixel.png");
-		
-		//this.bulletTextureRegion = TextureRegionFactory.(this.mBitmapTextureAtlas, this,"bg.png", 1, 1);
-		
+	
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
 		this.mOnScreenControlBaseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_base.png", 0, 0);
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
@@ -299,31 +293,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		mExplosionSound.play();
 	}
 	
-	PathModifier.IPathModifierListener pathListener = new PathModifier.IPathModifierListener() {
-		@Override
-		public void onPathStarted(final PathModifier pPathModifier,
-				final IEntity pEntity) {
-			Debug.d("onPathStarted");
-		}
-
-		@Override
-		public void onPathWaypointStarted(final PathModifier pPathModifier,
-				final IEntity pEntity, final int pWaypointIndex) {
-			Debug.d("onPathWaypointStarted:  " + pWaypointIndex);
-		}
-
-		@Override
-		public void onPathWaypointFinished(final PathModifier pPathModifier,
-				final IEntity pEntity, final int pWaypointIndex) {
-			Debug.d("onPathWaypointFinished: " + pWaypointIndex);
-		}
-
-		@Override
-		public void onPathFinished(final PathModifier pPathModifier,
-				final IEntity pEntity) {
-			Debug.d("onPathFinished");
-		}
-	};
 
 	public float getLookFowardRotation(float toX, float toY, float fromX, float fromY)
 	{		
@@ -543,8 +512,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		}
 	};
 
-	
-	
 	public float angleBetween2Lines(float x1, float y1, float x2, float y2)
 	{
 	    double angle1 = Math.atan2(y1 - inicialTouchPosition[1], x1 - inicialTouchPosition[0]);
