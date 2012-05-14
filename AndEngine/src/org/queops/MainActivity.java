@@ -144,7 +144,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	private Rectangle lifeBarRectangle;
 	private Sprite pauseBtn;
 	private TiledTextureRegion pauseButtonTextureRegion;
-
+	private boolean isGamePaused;
 	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -708,6 +708,10 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 
 		@Override
 		public void onTick() {
+			if(isGamePaused)
+			{
+				return;
+			}
 			// Inimigos comecam no fim da tela
 			final float centerX = cameraWidth + 50;
 			final float centerY = cameraHeight * MathUtils.RANDOM.nextFloat();
@@ -860,10 +864,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		}
 	});
 
-
-	
-	
-	
 	public void detectCollisions()
 	{
 		enemiesfor:
@@ -910,7 +910,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		scene.attachChild(lifeBarRectangle);
 	}
 	
-	
 	private void createGameOverPanel(){
 		//GameOverPanel
 		Sprite gameOverSprite = new Sprite(cameraWidth/2 - 127,cameraHeight/2 - 127, this.gameOverTextureRegion, this.getVertexBufferObjectManager());
@@ -931,7 +930,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		scene.registerTouchArea(newGameBtn);
 		scene.attachChild(newGameBtn);
 	}
-	
 	
 	public void createPauseButton(){
 		pauseBtn= new Sprite(cameraWidth-100, 50, pauseButtonTextureRegion, this.getVertexBufferObjectManager()){
@@ -955,13 +953,11 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		btnPlay.setPosition(cameraWidth-100, 50);
 		//btnPlay.setScale(2);
 		pauseGame.addMenuItem(btnPlay);
-		
+		isGamePaused = true;
 		pauseGame.setBackgroundEnabled(false);
 		pauseGame.setOnMenuItemClickListener(this);
 		return  pauseGame;
 	}
-	
-	
 	
 	@Override
 	public boolean onMenuItemClicked(MenuScene arg0, IMenuItem arg1,
@@ -971,6 +967,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 			if(scene.hasChildScene()){
 				scene.clearChildScene();
 				pauseBtn.setVisible(true);
+				isGamePaused = false;
 			}
 			return true;
 		default:
