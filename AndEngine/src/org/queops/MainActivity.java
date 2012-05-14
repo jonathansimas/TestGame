@@ -150,6 +150,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private IFont mFont;
 	private Integer score = new Integer(1);
 	private Text placarText;
+	private TiledTextureRegion gameOverTextureRegion;
 
 	
 	@Override
@@ -202,6 +203,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.fireButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"fireBtn.png", 1, 1);
 		this.fumacaTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"particle1.png", 1, 1);
 		this.bgTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"bg.png", 1, 1);
+		this.gameOverTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"gameOverPanel.png", 1, 1);
 		//Textura "transparente"
 		this.nullPixelTexture = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "nullpixel.png");
 		
@@ -234,6 +236,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		createFireButton();		
 		createCannonButton();
 		createPlacar();
+		createLifeBar();
 		
 		mEngine.registerUpdateHandler(heroMovingTimer);
 		mEngine.registerUpdateHandler(enemiesCreationTimer);
@@ -755,8 +758,14 @@ public class MainActivity extends SimpleBaseGameActivity {
 						{
 							if(score > 0)
 							{
-								score = score-1;
-								placarText.setText(score.toString());
+								//score = score-1;
+								//placarText.setText(score.toString());
+								lifeBarRectangle.setWidth(lifeBarRectangle.getWidth() - 10);
+								if(lifeBarRectangle.getWidth() == 0)
+								{
+									mEngine.stop();
+									createGameOverPanel();
+								}
 							}
 						}
 						newEnemy.detachSelf();
@@ -861,6 +870,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 			}
 		}
 	});
+	private Rectangle lifeBarRectangle;
 
 	
 	
@@ -901,5 +911,46 @@ public class MainActivity extends SimpleBaseGameActivity {
 		placarText = new Text(20, 10, this.mFont, "0", 30, new TextOptions(HorizontalAlign.CENTER), getVertexBufferObjectManager());
 		//placarText.setColor(Color.WHITE);
 		scene.attachChild(placarText);
+	}
+	
+	public void createLifeBar()
+	{
+		lifeBarRectangle = new Rectangle(cameraWidth - 60, 10, 50, 10, getVertexBufferObjectManager());
+		lifeBarRectangle.setColor(Color.GREEN);
+		scene.attachChild(lifeBarRectangle);
+	}
+	
+	
+	private void createGameOverPanel(){
+		//GameOverPanel
+		Sprite gameOverSprite = new Sprite(cameraWidth/2 - 127,cameraHeight/2 - 127, this.gameOverTextureRegion, this.getVertexBufferObjectManager());
+		scene.attachChild(gameOverSprite);
+		
+		//Reset Button
+//				fireBtn = new Sprite(cameraWidth - 130,cameraHeight - 70, this.fireButtonTextureRegion, this.getVertexBufferObjectManager()){
+//
+//					@Override
+//					public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
+//						if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_DOWN)
+//						{
+//							firing = true;
+//							bulletsParticleSystem.setParticlesSpawnEnabled(true);
+//						}
+//						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP ){
+//							firing = false;
+//							bulletsParticleSystem.setParticlesSpawnEnabled(false);
+//						} 
+//						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE ){
+//							firing = false;
+//							bulletsParticleSystem.setParticlesSpawnEnabled(false);
+//						}
+//						return super.onAreaTouched(pSceneTouchEvent, pTouchAreaLocalX, pTouchAreaLocalY);
+//					}
+//					
+//				};
+//				 
+//				fireBtn.setZIndex(CONTROLS_LAYER);  
+//				scene.registerTouchArea(fireBtn);
+//				scene.attachChild(fireBtn);
 	}
 }
