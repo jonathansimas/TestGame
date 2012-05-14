@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.andengine.entity.scene.menu.MenuScene.IOnMenuItemClickListener;
+import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.audio.sound.Sound;
 import org.andengine.audio.sound.SoundFactory;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
-import org.andengine.engine.camera.hud.controls.BaseOnScreenControl;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl.IAnalogOnScreenControlListener;
+import org.andengine.engine.camera.hud.controls.BaseOnScreenControl;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
@@ -18,39 +20,30 @@ import org.andengine.entity.Entity;
 import org.andengine.entity.IEntity;
 import org.andengine.entity.modifier.PathModifier;
 import org.andengine.entity.particle.SpriteParticleSystem;
-import org.andengine.entity.particle.emitter.BaseParticleEmitter;
 import org.andengine.entity.particle.emitter.CircleParticleEmitter;
-import org.andengine.entity.particle.emitter.PointParticleEmitter;
 import org.andengine.entity.particle.initializer.AccelerationParticleInitializer;
 import org.andengine.entity.particle.initializer.BlendFunctionParticleInitializer;
 import org.andengine.entity.particle.initializer.ColorParticleInitializer;
-import org.andengine.entity.particle.initializer.RotationParticleInitializer;
 import org.andengine.entity.particle.initializer.VelocityParticleInitializer;
 import org.andengine.entity.particle.modifier.AlphaParticleModifier;
-import org.andengine.entity.particle.modifier.ColorParticleModifier;
 import org.andengine.entity.particle.modifier.ExpireParticleInitializer;
 import org.andengine.entity.particle.modifier.ScaleParticleModifier;
-import org.andengine.entity.primitive.Line;
 import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.AutoParallaxBackground;
-import org.andengine.entity.scene.background.Background;
-import org.andengine.entity.scene.background.SpriteBackground;
 import org.andengine.entity.scene.background.ParallaxBackground.ParallaxEntity;
+import org.andengine.entity.scene.menu.MenuScene;
+import org.andengine.entity.scene.menu.item.SpriteMenuItem;
 import org.andengine.entity.sprite.ButtonSprite;
 import org.andengine.entity.sprite.ButtonSprite.OnClickListener;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
-import org.andengine.entity.util.FPSLogger;
-import org.andengine.examples.adt.card.Card;
 import org.andengine.extension.customTimer.Timer;
-import org.andengine.extension.physics.box2d.PhysicsWorld;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.input.touch.controller.MultiTouch;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.font.IFont;
-import org.andengine.opengl.texture.Texture;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -60,10 +53,7 @@ import org.andengine.opengl.texture.atlas.buildable.builder.BlackPawnTextureAtla
 import org.andengine.opengl.texture.atlas.buildable.builder.ITextureAtlasBuilder.TextureAtlasBuilderException;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
-import org.andengine.opengl.texture.region.TextureRegionFactory;
 import org.andengine.opengl.texture.region.TiledTextureRegion;
-import org.andengine.opengl.util.GLHelper;
-import org.andengine.opengl.vbo.DrawType;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.HorizontalAlign;
@@ -71,16 +61,13 @@ import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 import org.andengine.util.math.MathUtils;
 
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
-
 import android.graphics.Typeface;
 import android.opengl.GLES10;
 import android.opengl.GLES20;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
-public class MainActivity extends SimpleBaseGameActivity {
+public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItemClickListener{
 	// ===========================================================
 	// Constants
 	// ===========================================================
@@ -151,20 +138,25 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private Integer score = new Integer(1);
 	private Text placarText;
 	private TiledTextureRegion gameOverTextureRegion;
+	private TiledTextureRegion exitButtonTextureRegion;
+	private TiledTextureRegion newGameButtonTextureRegion;
+	private Camera camera;
+	private Rectangle lifeBarRectangle;
+	private Sprite pauseBtn;
+	private TiledTextureRegion pauseButtonTextureRegion;
 
 	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		
 		mainAc = this;
-		final Camera camera = new Camera(0, 0, cameraWidth, cameraHeight);
+		camera = new Camera(0, 0, cameraWidth, cameraHeight);
 		final EngineOptions engineOptions = new EngineOptions(true,	ScreenOrientation.LANDSCAPE_SENSOR, new RatioResolutionPolicy(cameraWidth, cameraHeight), camera);
 		engineOptions.getAudioOptions().setNeedsSound(true);
 		engineOptions.getTouchOptions().setNeedsMultiTouch(true);
 		engineOptions.getTouchOptions().setTouchEventIntervalMilliseconds(41);
 		engineOptions.getRenderOptions().setMultiSampling(true);	
 		engineOptions.getRenderOptions().setDithering(true);
-		
 		if(MultiTouch.isSupported(this)) {
 			if(MultiTouch.isSupportedDistinct(this)) {
 				//Toast.makeText(this, "MultiTouch detected --> Both controls will work properly!", Toast.LENGTH_SHORT).show();
@@ -204,6 +196,10 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.fumacaTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"particle1.png", 1, 1);
 		this.bgTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"bg.png", 1, 1);
 		this.gameOverTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"gameOverPanel.png", 1, 1);
+		this.exitButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"ExitButton.png", 1, 1);
+		this.newGameButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"newGameButton.png", 1, 1);
+		this.pauseButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"playerPause.png", 1, 1);
+		
 		//Textura "transparente"
 		this.nullPixelTexture = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "nullpixel.png");
 		
@@ -237,6 +233,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		createCannonButton();
 		createPlacar();
 		createLifeBar();
+		createPauseButton();
 		
 		mEngine.registerUpdateHandler(heroMovingTimer);
 		mEngine.registerUpdateHandler(enemiesCreationTimer);
@@ -858,19 +855,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 					spriteB.detachSelf();
 					spriteB = null;
 					return;
-				}
-				// TODO
-				// if (spriteB.collidesWith(hero)) {
-				//
-				// spriteB.detachSelf();
-				// bullets.remove(spriteB);
-				// spriteB = null;
-				// return;
-				// }
+				}				
 			}
 		}
 	});
-	private Rectangle lifeBarRectangle;
+
 
 	
 	
@@ -885,6 +874,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 				bulletsfor:
 				for(int j = 0; j < bullets.size();j++)
 				{
+					//Manual detection mode - não excluir, pois servirá como exemplo onde não for possivel o metodo "collidesWith()"
 					//if(bullets.get(j).hasParent() & MathUtils.distance(bullets.get(j).getX(), bullets.get(j).getY(), enemies.get(i).getX(), enemies.get(i).getY()) <= enemies.get(i).getWidth() * 1.4)
 					//{
 						if(enemies.get(i).collidesWith(bullets.get(j)))
@@ -926,31 +916,65 @@ public class MainActivity extends SimpleBaseGameActivity {
 		Sprite gameOverSprite = new Sprite(cameraWidth/2 - 127,cameraHeight/2 - 127, this.gameOverTextureRegion, this.getVertexBufferObjectManager());
 		scene.attachChild(gameOverSprite);
 		
-		//Reset Button
-//				fireBtn = new Sprite(cameraWidth - 130,cameraHeight - 70, this.fireButtonTextureRegion, this.getVertexBufferObjectManager()){
-//
-//					@Override
-//					public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
-//						if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_DOWN)
-//						{
-//							firing = true;
-//							bulletsParticleSystem.setParticlesSpawnEnabled(true);
-//						}
-//						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP ){
-//							firing = false;
-//							bulletsParticleSystem.setParticlesSpawnEnabled(false);
-//						} 
-//						else if(pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE ){
-//							firing = false;
-//							bulletsParticleSystem.setParticlesSpawnEnabled(false);
-//						}
-//						return super.onAreaTouched(pSceneTouchEvent, pTouchAreaLocalX, pTouchAreaLocalY);
-//					}
-//					
-//				};
-//				 
-//				fireBtn.setZIndex(CONTROLS_LAYER);  
-//				scene.registerTouchArea(fireBtn);
-//				scene.attachChild(fireBtn);
+		//new Game Button
+		ButtonSprite newGameBtn = new ButtonSprite(gameOverSprite.getX()+11,gameOverSprite.getY()+147, this.newGameButtonTextureRegion, this.getVertexBufferObjectManager()){
+			@Override
+			public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) 
+			{
+				scene.reset();
+				mEngine.start();
+				 //scene.setChildScene(pauseScene(this), false, true, true);
+				return super.onAreaTouched(pSceneTouchEvent, pTouchAreaLocalX, pTouchAreaLocalY);
+			}
+		};
+		
+		scene.registerTouchArea(newGameBtn);
+		scene.attachChild(newGameBtn);
+	}
+	
+	
+	public void createPauseButton(){
+		pauseBtn= new Sprite(cameraWidth-100, 50, pauseButtonTextureRegion, this.getVertexBufferObjectManager()){
+			@Override
+			public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
+	   			 if(pSceneTouchEvent.getAction()==MotionEvent.ACTION_UP){
+	   				 this.setVisible(false);
+	   				 scene.setChildScene(pauseScene(pauseBtn), false, true, true);
+	   			 }
+	   			 return true;
+       	}};
+       //	pauseBtn.setScale(2);
+       	scene.attachChild(pauseBtn);
+       	scene.registerTouchArea(pauseBtn);
+	}
+	
+	private MenuScene pauseScene(Sprite buttonPause)
+	{
+		final MenuScene pauseGame= new MenuScene(camera);		
+		final SpriteMenuItem btnPlay = new SpriteMenuItem(1, pauseButtonTextureRegion, this.getVertexBufferObjectManager());
+		btnPlay.setPosition(cameraWidth-100, 50);
+		//btnPlay.setScale(2);
+		pauseGame.addMenuItem(btnPlay);
+		
+		pauseGame.setBackgroundEnabled(false);
+		pauseGame.setOnMenuItemClickListener(this);
+		return  pauseGame;
+	}
+	
+	
+	
+	@Override
+	public boolean onMenuItemClicked(MenuScene arg0, IMenuItem arg1,
+			float arg2, float arg3) {
+		switch(arg1.getID()){
+		case 1:
+			if(scene.hasChildScene()){
+				scene.clearChildScene();
+				pauseBtn.setVisible(true);
+			}
+			return true;
+		default:
+			return false;
+		}
 	}
 }
