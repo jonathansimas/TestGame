@@ -20,16 +20,16 @@ public class EnemiesCreationTimer extends Timer {
 				ITextureRegion inimigo;
 				switch (MathUtils.RANDOM.nextInt(2)) {
 				case 0:
-					inimigo = main.enemy1TextureRegion;
+					inimigo = main.getEnemy1TextureRegion();
 					break;
 				case 1:
-					inimigo = main.enemy2TextureRegion;
+					inimigo = main.getEnemy2TextureRegion();
 					break;
 				case 2:
-					inimigo = main.enemy3TextureRegion; 
+					inimigo = main.getEnemy3TextureRegion();
 					break;
 				default:
-					inimigo = main.enemy1TextureRegion;
+					inimigo = main.getEnemy1TextureRegion();
 					break;
 				}
 				
@@ -37,12 +37,12 @@ public class EnemiesCreationTimer extends Timer {
 				newEnemy.setZIndex(main.ENEMY_LAYER);
 				newEnemy.setRotation(90);
 				
-				main.enemies.add(newEnemy);				
+				main.getEnemies().add(newEnemy);				
 
-				main.scene.registerTouchArea(newEnemy);
-				main.scene.attachChild(newEnemy);
+				main.getScene().registerTouchArea(newEnemy);
+				main.getScene().attachChild(newEnemy);
 				
-				main.scene.registerUpdateHandler(new IUpdateHandler() {
+				main.getScene().registerUpdateHandler(new IUpdateHandler() {
 					@Override
 					public void reset() {
 					}
@@ -53,16 +53,16 @@ public class EnemiesCreationTimer extends Timer {
 						//Movendo Inimigos
 						if(newEnemy != null)
 						newEnemy.setX(newEnemy.getX() - 5.5f);
-						if (newEnemy != null && newEnemy.collidesWith(main.hero) || newEnemy.getX() < -20) {
+						if (newEnemy != null && newEnemy.collidesWith(main.getHero()) || newEnemy.getX() < -20) {
 							
-							if (newEnemy != null && newEnemy.collidesWith(main.hero) && newEnemy.hasParent() )
+							if (newEnemy != null && newEnemy.collidesWith(main.getHero()) && newEnemy.hasParent() )
 							{
-								if(main.score > 0)
+								if(main.getScore() > 0)
 								{
 									//score = score-1;
 									//placarText.setText(score.toString());
-									main.lifeBarRectangle.setWidth(main.lifeBarRectangle.getWidth() - 10);
-									if(main.lifeBarRectangle.getWidth() == 0)
+									main.getLifeBarRectangle().setWidth(main.getLifeBarRectangle().getWidth() - 10);
+									if(main.getLifeBarRectangle().getWidth() == 0)
 									{
 										main.getEngine().stop();
 										main.createGameOverPanel();
@@ -70,7 +70,7 @@ public class EnemiesCreationTimer extends Timer {
 								}
 							}
 							newEnemy.detachSelf();
-							main.enemies.remove(newEnemy);						
+							main.getEnemies().remove(newEnemy);						
 						}
 					}
 				});

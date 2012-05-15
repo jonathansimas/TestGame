@@ -11,6 +11,7 @@ import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl.IAnalogOnScreenControlListener;
 import org.andengine.engine.camera.hud.controls.BaseOnScreenControl;
 import org.andengine.engine.handler.IUpdateHandler;
+import org.andengine.engine.handler.physics.PhysicsHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
@@ -57,6 +58,9 @@ import org.andengine.util.HorizontalAlign;
 import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 import org.andengine.util.math.MathUtils;
+import org.queops.game.timers.BulletsTimer;
+import org.queops.game.timers.EnemiesCreationTimer;
+import org.queops.game.timers.HeroMovingTimer;
 
 import android.graphics.Typeface;
 import android.opengl.GLES10;
@@ -68,87 +72,93 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	// ===========================================================
 	// Constants
 	// ===========================================================
-
-	private int cameraWidth = 640;//480;
-	private int cameraHeight = 384;//288;
-	private static final int BG_LAYER = 1;
-	private static final int ENEMY_LAYER = 2;
-	protected static final int HERO_LAYER = 3;
-	protected static final int CONTROLS_LAYER = 1;
-	private static final float RATE_MIN = 8;
-	private static final float RATE_MAX = 12;
-	private static final int PARTICLES_MAX = 50;
+	public static int CAMERA_WIDTH = 640;//480;
+	public static int CAMERA_HEIGHT = 384;//288;
+	public static final int BG_LAYER = 1;
+	public static final int ENEMY_LAYER = 2;
+	public static final int HERO_LAYER = 3;
+	public static final int CONTROLS_LAYER = 1;
+	public static final float RATE_MIN = 8;
+	public static final float RATE_MAX = 12;
+	public static final int PARTICLES_MAX = 50;
 	// ===========================================================
 	// Fields
 	// ===========================================================
-
-	private BuildableBitmapTextureAtlas mBitmapTextureAtlas;
-	private ITextureRegion mFace1TextureRegion;
-	private ITextureRegion heroTextureRegion;
 	private MainActivity mainAc;
+	private Scene scene;	
+
+	private Camera camera;
 	private Sprite hero;
-	protected float diferencialX;
-	protected float diferencialY;
+	private Sprite fireBtn;
+	private Sprite pauseBtn;
 	protected List<Sprite> enemies = new ArrayList<Sprite>();
 	protected List<Rectangle> bullets = new ArrayList<Rectangle>();
-	private Sound mAttackSound;
+	
+	//Textures
+	private BuildableBitmapTextureAtlas mBitmapTextureAtlas;
+	private ITextureRegion heroTextureRegion;
+	private ITiledTextureRegion fireButtonTextureRegion;
+	private TiledTextureRegion fumacaTextureRegion;
+	private TiledTextureRegion bgTextureRegion;
+	//Enemies
+	private ITextureRegion enemy1TextureRegion;
+	private ITextureRegion enemy2TextureRegion;
+	private ITextureRegion enemy3TextureRegion;
+	//Controls
+	private BitmapTextureAtlas mOnScreenControlTexture;
+	private ITextureRegion mOnScreenControlBaseTextureRegion;
+	private ITextureRegion mOnScreenControlKnobTextureRegion;
+	//Other Buttons
+	private TiledTextureRegion gameOverTextureRegion;
+	private TiledTextureRegion exitButtonTextureRegion;
+	private TiledTextureRegion newGameButtonTextureRegion;
+	private TiledTextureRegion pauseButtonTextureRegion;
+	
+	//particles
+	private SpriteParticleSystem starsParticleSystem;
+	private CircleParticleEmitter emitter;
+	private CircleParticleEmitter bulletsEmitter;
+	private SpriteParticleSystem bulletsParticleSystem;
+	//Sounds
+	private Sound machnineGunSound;
+	private Sound canonSound;
+	//Hero Moving Vars
+	private float[] bounds;
+	protected float diferencialX;
+	protected float diferencialY;
 	protected float deFaultSpeed = 0.41f;
 	protected float rotationSpeed = 0.1f;
 	protected float defaultRotationSpeed = 0.5f;
 	protected float speed = 0.11f;
-	private ITextureRegion enemy1TextureRegion;
-	private ITextureRegion enemy2TextureRegion;
-	private ITextureRegion enemy3TextureRegion;
-	private ITiledTextureRegion fireButtonTextureRegion;
 	protected float newY = 0;
 	protected float newX = 0;
-	private Sound mExplosionSound;
-	private float[] bounds = new float[] { 1, 1, cameraWidth - 32, cameraHeight - 32 };
 	private float antigoTouchX = -1f;
 	private float antigoTouchY = -1f;
-	private Scene scene;
 	protected float destinationX;
 	protected float destinationY;
 	private boolean pitchSpeed = false;
 	private float newRotation;
 	private float[] inicialTouchPosition;
-	private SpriteParticleSystem starsParticleSystem;
-	private CircleParticleEmitter emitter;
-	//rotation
-	private float mCenterX, mCenterY;
-	private float direction = 0;
-	private float sX, sY;
-	private float startDirection=0;
-	private TiledTextureRegion fumacaTextureRegion;
-	private TiledTextureRegion bgTextureRegion;
-	private Sprite bg;
-	private BitmapTextureAtlas mOnScreenControlTexture;
-	private ITextureRegion mOnScreenControlBaseTextureRegion;
-	private ITextureRegion mOnScreenControlKnobTextureRegion;
-	private ITextureRegion nullPixelTexture;
-	private boolean analogControlsEnabled;
+	//Analog Controls
+	private boolean analogControlsEnabled = true;
+	private PhysicsHandler physicsHandler;
 	private boolean firing;
-	private CircleParticleEmitter bulletsEmitter;
-	private SpriteParticleSystem bulletsParticleSystem;
-	private Sprite fireBtn;
+	//Placar e LifeBar
 	private IFont mFont;
 	private Integer score = new Integer(1);
 	private Text placarText;
-	private TiledTextureRegion gameOverTextureRegion;
-	private TiledTextureRegion exitButtonTextureRegion;
-	private TiledTextureRegion newGameButtonTextureRegion;
-	private Camera camera;
 	private Rectangle lifeBarRectangle;
-	private Sprite pauseBtn;
-	private TiledTextureRegion pauseButtonTextureRegion;
-	private boolean isGamePaused;
+	//Timers
+	public Timer bulletsTimer;
+	public Timer enemiesCreationTimer;
+	public Timer heroMovingTimer;
 	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		
 		mainAc = this;
-		camera = new Camera(0, 0, cameraWidth, cameraHeight);
-		final EngineOptions engineOptions = new EngineOptions(true,	ScreenOrientation.LANDSCAPE_SENSOR, new RatioResolutionPolicy(cameraWidth, cameraHeight), camera);
+		camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+		final EngineOptions engineOptions = new EngineOptions(true,	ScreenOrientation.LANDSCAPE_SENSOR, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), camera);
 		engineOptions.getAudioOptions().setNeedsSound(true);
 		engineOptions.getTouchOptions().setNeedsMultiTouch(true);
 		engineOptions.getTouchOptions().setTouchEventIntervalMilliseconds(41);
@@ -163,7 +173,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		} else {
 			Toast.makeText(this, "Sorry your device does NOT support MultiTouch!\n\n(Falling back to SingleTouch.)\n\nControls are placed at different vertical locations.", Toast.LENGTH_LONG).show();
 		}
-		
+		bounds = new float[] { 1, 1, CAMERA_WIDTH - 32, CAMERA_HEIGHT - 32 };
 		return engineOptions;
 	}
 
@@ -175,8 +185,8 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, Typeface.create(Typeface.DEFAULT, Typeface.BOLD),32, Color.WHITE_ABGR_PACKED_INT);
 		this.mFont.load();
 		try {
-			this.mAttackSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "MachineGun2.ogg");
-			this.mExplosionSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "Canon.ogg");
+			this.machnineGunSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "MachineGun2.ogg");
+			this.canonSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "Canon.ogg");
 		} 
 		catch (final IOException e) 
 		{
@@ -196,9 +206,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		this.exitButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"ExitButton.png", 1, 1);
 		this.newGameButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"newGameButton.png", 1, 1);
 		this.pauseButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this,"playerPause.png", 1, 1);
-		
-		this.nullPixelTexture = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "nullpixel.png");
-	
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
 		this.mOnScreenControlBaseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_base.png", 0, 0);
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
@@ -217,7 +224,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	public Scene onCreateScene() {
 
 		//this.mEngine.registerUpdateHandler(new FPSLogger());
-		scene = getScene1();
+		scene = new Scene();
 		createHero();
 		createBg();		
 		createPropulsionSmoke();
@@ -228,10 +235,12 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		createPlacar();
 		createLifeBar();
 		createPauseButton();
-		
+		heroMovingTimer = new HeroMovingTimer(1, this);
+		enemiesCreationTimer = new EnemiesCreationTimer(1, this);
+		bulletsTimer = new BulletsTimer(1, this);
 		mEngine.registerUpdateHandler(heroMovingTimer);
 		mEngine.registerUpdateHandler(enemiesCreationTimer);
-		mEngine.registerUpdateHandler(timerBullets);
+		mEngine.registerUpdateHandler(bulletsTimer);
 		
 		scene.setTouchAreaBindingOnActionDownEnabled(true);
 		
@@ -240,7 +249,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	
 	private void createFireButton(){
 		//Fire Button
-				fireBtn = new Sprite(cameraWidth - 130,cameraHeight - 70, this.fireButtonTextureRegion, this.getVertexBufferObjectManager()){
+				fireBtn = new Sprite(CAMERA_WIDTH - 130,CAMERA_HEIGHT - 70, this.fireButtonTextureRegion, this.getVertexBufferObjectManager()){
 
 					@Override
 					public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
@@ -269,7 +278,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 
 	private void createCannonButton(){
 		//Fire Button
-				final Sprite fireBtn = new ButtonSprite(cameraWidth - 90,cameraHeight - 120, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), cannonBtnHandler);
+				final Sprite fireBtn = new ButtonSprite(CAMERA_WIDTH - 90,CAMERA_HEIGHT - 120, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), cannonBtnHandler);
 				 
 				fireBtn.setZIndex(CONTROLS_LAYER);  
 				scene.registerTouchArea(fireBtn);
@@ -280,19 +289,18 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		
 		final AutoParallaxBackground autoParallaxBackground = new AutoParallaxBackground(0, 0, 0, 5);
 		final VertexBufferObjectManager vertexBufferObjectManager = this.getVertexBufferObjectManager();
-		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-10f, new Sprite(0, 0,cameraWidth, cameraHeight, bgTextureRegion, vertexBufferObjectManager)));
+		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-10f, new Sprite(0, 0,CAMERA_WIDTH, CAMERA_HEIGHT, bgTextureRegion, vertexBufferObjectManager)));
 		
 		scene.setBackground(autoParallaxBackground);
 	}
 
 	public void playMachineGun() {
-		mAttackSound.play();
+		machnineGunSound.play();
 	}
 
 	public void playCanon() {
-		mExplosionSound.play();
+		canonSound.play();
 	}
-	
 
 	public float getLookFowardRotation(float toX, float toY, float fromX, float fromY)
 	{		
@@ -303,7 +311,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	
 	public void createHero()
 	{
-		hero = new Sprite(cameraWidth / 3, cameraHeight / 2, heroTextureRegion, getVertexBufferObjectManager());
+		hero = new Sprite(CAMERA_WIDTH / 3, CAMERA_HEIGHT / 2, heroTextureRegion, getVertexBufferObjectManager());
 		hero.setRotation(-90);
 		hero.setRotationCenter(8, 8);
 		//Alternative hero
@@ -319,6 +327,9 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 //		hero.attachChild(line2); 
 //		hero.attachChild(line3);
 //		
+		physicsHandler = new PhysicsHandler(hero);
+		hero.registerUpdateHandler(physicsHandler);
+		
 		if(analogControlsEnabled)
 		{
 			createAnalogControl();
@@ -331,147 +342,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		
 	}
 	
-	private void createFullTouchControl() {
-		
-		Rectangle leftRect = new Rectangle(0, 0, cameraWidth/3*2, cameraHeight, getVertexBufferObjectManager());
-		Rectangle rightRect = new Rectangle(0, 0, cameraWidth/3, cameraHeight, getVertexBufferObjectManager());
-		
-		
-		Sprite leftSprite = new Sprite(0,0,nullPixelTexture,getVertexBufferObjectManager()){			
-			@Override
-			public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
-				pitchSpeed =true;
-
-				if (hero != null && pSceneTouchEvent.getX() < cameraWidth * 2 / 3 ) 
-				{
-					if (antigoTouchX == -1f) 
-					{
-						antigoTouchX = pSceneTouchEvent.getX();
-						antigoTouchY = pSceneTouchEvent.getY();
-					}
-					
-					newX = hero.getX();
-					newY = hero.getY();
-					
-					if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_UP || pSceneTouchEvent.getAction() == TouchEvent.ACTION_OUTSIDE) 
-					{
-						pitchSpeed = false;
-						antigoTouchX = -1f;
-						antigoTouchY = -1f;
-					
-					}
-					
-					if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_DOWN && pSceneTouchEvent.getX() < cameraWidth * 2 / 3) 
-					{
-						
-						inicialTouchPosition = new float[]{pSceneTouchEvent.getX(), pSceneTouchEvent.getY()};
-
-						
-							diferencialX = (float) (pSceneTouchEvent.getX() - antigoTouchX);
-							diferencialY = (float) (pSceneTouchEvent.getY() - antigoTouchY);
-
-							if (pSceneTouchEvent.getX() > newX && diferencialX < 0) {
-								diferencialX = -(float) (pSceneTouchEvent.getX() - antigoTouchX);
-							}
-							if (pSceneTouchEvent.getY() > newY && diferencialX < 0) {
-								diferencialY = -(float) (pSceneTouchEvent.getY() - antigoTouchY);
-							}
-
-					} 
-					else if (pSceneTouchEvent.getAction() == TouchEvent.ACTION_MOVE) 
-					{
-							diferencialX = (float) (pSceneTouchEvent.getX() - antigoTouchX);
-							diferencialY = (float) (pSceneTouchEvent.getY() - antigoTouchY);
-							newRotation = angleBetween2Lines(pSceneTouchEvent.getX(), pSceneTouchEvent.getY(), antigoTouchX, antigoTouchY);
-							antigoTouchX = pSceneTouchEvent.getX();
-							antigoTouchY = pSceneTouchEvent.getY();
-							
-							
-					}
-
-				}
-
-				return true;//super.onSceneTouchEvent(pSceneTouchEvent);
-				
-			}
-		};
-		leftSprite.attachChild(leftRect);
-		
-		
-		Sprite rightSprite = new Sprite(cameraWidth/3*2,0,nullPixelTexture,getVertexBufferObjectManager()){
-			boolean mGrabbed = false;
-			@Override
-			public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
-				
-				return true;
-			}
-		};		
-		rightSprite.attachChild(rightRect);
-		
-		rightSprite.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		leftSprite.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		
-		scene.registerTouchArea(rightSprite);
-		scene.registerTouchArea(leftSprite);
-		scene.attachChild(leftSprite);
-		scene.attachChild(rightSprite);
-	}
-
-	public Scene getScene1() 
-	{
-		final Scene scene = new Scene(){
-
-			@Override
-			public boolean onSceneTouchEvent(TouchEvent pSceneTouchEvent) {
-				onLeftTouchEvent(pSceneTouchEvent);
-				return super.onSceneTouchEvent(pSceneTouchEvent);
-			}
-			
-		};
-		
-		return scene;
-	}
-
-	// Fire Button Handler
-	public 	OnClickListener fireBtnHandler = new OnClickListener() {
-
-		@Override
-		public void onClick(final ButtonSprite pButtonSprite,	float pTouchAreaLocalX, float pTouchAreaLocalY) {
-			
-		
-					if(pButtonSprite.isPressed())
-					{
-						firing = true;
-						bulletsParticleSystem.setParticlesSpawnEnabled(true);
-					}
-					else{
-						firing = false;
-						bulletsParticleSystem.setParticlesSpawnEnabled(false);
-					}
-//					final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 20, 2,	mainAc.getVertexBufferObjectManager());
-//					rect.setX(hero.getX());
-//					rect.setY(hero.getY());
-//					rect.setZIndex(ENEMY_LAYER);
-//					rect.setColor(Color.RED);
-//
-//					bullets.add(rect);
-//					scene.attachChild(rect);
-//					scene.registerUpdateHandler(new IUpdateHandler() {
-//						@Override
-//						public void reset(){}
-//
-//						@Override
-//						public void onUpdate(final float pSecondsElapsed)
-//						{
-//							rect.setX(rect.getX() + 7.5f);	
-//						}
-//					});
-//					playCanon();
-			
-
-		}
-	};
-
 	// Canon Button Handler
 	public 	OnClickListener cannonBtnHandler = new OnClickListener() {
 
@@ -560,11 +430,12 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	public void createAnalogControl()
 	{
 		final float x1 = 0;
-		final float y1 = cameraHeight - this.mOnScreenControlBaseTextureRegion.getHeight();
+		final float y1 = CAMERA_HEIGHT - this.mOnScreenControlBaseTextureRegion.getHeight();
 		final AnalogOnScreenControl velocityOnScreenControl = new AnalogOnScreenControl(x1, y1, this.mEngine.getCamera(), this.mOnScreenControlBaseTextureRegion, this.mOnScreenControlKnobTextureRegion, 0.1f, this.getVertexBufferObjectManager(), new IAnalogOnScreenControlListener() {
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
-				//physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
+				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
+				hero.setRotation(MathUtils.radToDeg((float)Math.atan2(pValueX, -pValueY)));
 			}
 
 			@Override
@@ -582,7 +453,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		
 		
 
-		if (hero != null && pSceneTouchEvent.getX() < cameraWidth * 2 / 3 ) 
+		if (hero != null && pSceneTouchEvent.getX() < CAMERA_WIDTH * 2 / 3 ) 
 		{
 			pitchSpeed =true;
 			if (antigoTouchX == -1f) 
@@ -669,167 +540,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		}
 	}
 	
-	public Timer enemiesCreationTimer = new Timer(2, new Timer.ITimerCallback() {
-
-		private Sprite newEnemy;
-
-		@Override
-		public void onTick() {
-			if(isGamePaused)
-			{
-				return;
-			}
-			// Inimigos comecam no fim da tela
-			final float centerX = cameraWidth + 50;
-			final float centerY = cameraHeight * MathUtils.RANDOM.nextFloat();
-			ITextureRegion inimigo;
-			switch (MathUtils.RANDOM.nextInt(2)) {
-			case 0:
-				inimigo = enemy1TextureRegion;
-				break;
-			case 1:
-				inimigo = enemy2TextureRegion;
-				break;
-			case 2:
-				inimigo = enemy3TextureRegion;
-				break;
-			default:
-				inimigo = enemy1TextureRegion;
-				break;
-			}
-			
-			final Sprite newEnemy = new Sprite(centerX, centerY, inimigo,getVertexBufferObjectManager());				
-			newEnemy.setZIndex(ENEMY_LAYER);
-			newEnemy.setRotation(90);
-			
-			enemies.add(newEnemy);				
-
-			scene.registerTouchArea(newEnemy);
-			scene.attachChild(newEnemy);
-			
-			//removeEnemies();
-			
-			scene.registerUpdateHandler(new IUpdateHandler() {
-				@Override
-				public void reset() {
-				}
-
-				@Override
-				public void onUpdate(final float pSecondsElapsed) {
-					
-					//Movendo Inimigos
-					if(newEnemy != null)
-					newEnemy.setX(newEnemy.getX() - 5.5f);
-					if (newEnemy != null && newEnemy.collidesWith(hero) || newEnemy.getX() < -20) {
-						
-						if (newEnemy != null && newEnemy.collidesWith(hero) && newEnemy.hasParent() )
-						{
-							if(score > 0)
-							{
-								//score = score-1;
-								//placarText.setText(score.toString());
-								lifeBarRectangle.setWidth(lifeBarRectangle.getWidth() - 10);
-								if(lifeBarRectangle.getWidth() == 0)
-								{
-									mEngine.stop();
-									createGameOverPanel();
-								}
-							}
-						}
-						newEnemy.detachSelf();
-						enemies.remove(newEnemy);						
-					}
-				}
-			});
-		}//end onTick()
-	});
-
-	//OnEnterFrame timed
-	Timer heroMovingTimer = new Timer(0.023f, new Timer.ITimerCallback() {
-		
-		@Override
-		public void onTick() {
-			detectCollisions();
-			//Movendo o heroi
-			if(pitchSpeed)
-			{
-				speed = deFaultSpeed;
-				rotationSpeed = defaultRotationSpeed;
-			}
-			else if (speed >0){
-				speed -= 0.02f;
-				rotationSpeed -= 0.02f;
-			}
-			else
-			{
-				speed = 0;
-				rotationSpeed = 0;
-			}
-			
-			if(speed != 0)
-			{
-				newX += diferencialX * speed;
-				newY += diferencialY * speed;
-			}
-
-			newX = Math.max(Math.min(newX, bounds[2]), bounds[0]);
-			newY = Math.max(Math.min(newY, bounds[3]), bounds[1]);
-			hero.setRotation(newRotation);
-			hero.setPosition(newX, newY);
-			emitter.setCenter(newX, newY+8);
-			bulletsEmitter.setCenter(newX, newY+8);
-		}
-	});
-	
-	Timer timerBullets = new Timer(0.5f, new Timer.ITimerCallback() {
-		@Override
-		public void onTick() {						
-			
-			
-			if(firing)
-			{
-				final Rectangle rect = new Rectangle(newX, newY	- diferencialY, 8, 2,	mainAc.getVertexBufferObjectManager());
-				rect.setX(hero.getX()+10);
-				rect.setY(hero.getY());
-				rect.setZIndex(ENEMY_LAYER);
-				rect.setColor(Color.RED);
-				final Rectangle rect2 = new Rectangle(newX, newY	- diferencialY, 8, 2,	mainAc.getVertexBufferObjectManager());
-				rect2.setX(hero.getX()+10);
-				rect2.setY(hero.getY()+32);
-				rect2.setZIndex(ENEMY_LAYER);
-				rect2.setColor(Color.RED);
-				
-				
-				bullets.add(rect);
-				
-				bullets.add(rect2);
-				scene.attachChild(rect);
-				scene.attachChild(rect2);
-				
-				scene.registerUpdateHandler(new IUpdateHandler() {
-					@Override
-					public void reset(){} 
-
-					@Override
-					public void onUpdate(final float pSecondsElapsed)
-					{
-						rect.setX(rect.getX() + 7.5f);	
-						rect2.setX(rect2.getX() + 7.5f);	
-					}
-				});
-				playMachineGun();
-			}
-			
-			for (Rectangle spriteB : bullets) {
-				if (spriteB.getX() > cameraWidth) {
-					bullets.remove(spriteB);
-					spriteB.detachSelf();
-					spriteB = null;
-					return;
-				}				
-			}
-		}
-	});
 
 	public void detectCollisions()
 	{
@@ -861,7 +571,6 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 			}
 		}
 	}
-	 
 	public void createPlacar()
 	{
 		
@@ -872,14 +581,14 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	
 	public void createLifeBar()
 	{
-		lifeBarRectangle = new Rectangle(cameraWidth - 60, 10, 50, 10, getVertexBufferObjectManager());
+		lifeBarRectangle = new Rectangle(CAMERA_WIDTH - 60, 10, 50, 10, getVertexBufferObjectManager());
 		lifeBarRectangle.setColor(Color.GREEN);
 		scene.attachChild(lifeBarRectangle);
 	}
 	
-	private void createGameOverPanel(){
+	public void createGameOverPanel(){
 		//GameOverPanel
-		Sprite gameOverSprite = new Sprite(cameraWidth/2 - 127,cameraHeight/2 - 127, this.gameOverTextureRegion, this.getVertexBufferObjectManager());
+		Sprite gameOverSprite = new Sprite(CAMERA_WIDTH/2 - 127,CAMERA_HEIGHT/2 - 127, this.gameOverTextureRegion, this.getVertexBufferObjectManager());
 		scene.attachChild(gameOverSprite);
 		
 		//new Game Button
@@ -899,7 +608,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	}
 	
 	public void createPauseButton(){
-		pauseBtn= new Sprite(cameraWidth-100, 50, pauseButtonTextureRegion, this.getVertexBufferObjectManager()){
+		pauseBtn= new Sprite(CAMERA_WIDTH-100, 50, pauseButtonTextureRegion, this.getVertexBufferObjectManager()){
 			@Override
 			public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
 	   			 if(pSceneTouchEvent.getAction()==MotionEvent.ACTION_UP){
@@ -917,10 +626,10 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	{
 		final MenuScene pauseGame= new MenuScene(camera);		
 		final SpriteMenuItem btnPlay = new SpriteMenuItem(1, pauseButtonTextureRegion, this.getVertexBufferObjectManager());
-		btnPlay.setPosition(cameraWidth-100, 50);
+		btnPlay.setPosition(CAMERA_WIDTH-100, 50);
 		//btnPlay.setScale(2);
 		pauseGame.addMenuItem(btnPlay);
-		isGamePaused = true;
+		
 		pauseGame.setBackgroundEnabled(false);
 		pauseGame.setOnMenuItemClickListener(this);
 		return  pauseGame;
@@ -934,11 +643,59 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 			if(scene.hasChildScene()){
 				scene.clearChildScene();
 				pauseBtn.setVisible(true);
-				isGamePaused = false;
+				
 			}
 			return true;
 		default:
 			return false;
 		}
+	}
+
+	public Sprite getHero()
+	{
+		return hero;
+	}
+	public Scene getScene() {
+		return scene;
+	}
+	
+	public List<Sprite> getEnemies() {
+		return enemies;
+	}
+
+	public List<Rectangle> getBullets() {
+		return bullets;
+	}
+
+	public boolean isFiring() {
+		return firing;
+	}
+
+	public void setFiring(boolean firing) {
+		this.firing = firing;
+	}
+
+	public Integer getScore() {
+		return score;
+	}
+
+	public void setScore(Integer score) {
+		this.score = score;
+	}
+
+	public Rectangle getLifeBarRectangle() {
+		return lifeBarRectangle;
+	}
+
+	public ITextureRegion getEnemy1TextureRegion() {
+		return enemy1TextureRegion;
+	}
+
+	public ITextureRegion getEnemy2TextureRegion() {
+		return enemy2TextureRegion;
+	}
+
+	public ITextureRegion getEnemy3TextureRegion() {
+		return enemy3TextureRegion;
 	}
 }
