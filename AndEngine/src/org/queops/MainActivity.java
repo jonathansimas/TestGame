@@ -90,6 +90,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	private Camera camera;
 	private Sprite hero;
 	private Sprite fireBtn;
+	private ButtonSprite canonBtn;
 	private Sprite pauseBtn;
 	protected List<Sprite> enemies = new ArrayList<Sprite>();
 	protected List<Rectangle> bullets = new ArrayList<Rectangle>();
@@ -115,8 +116,8 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	private TiledTextureRegion pauseButtonTextureRegion;
 	
 	//particles
-	private SpriteParticleSystem starsParticleSystem;
-	private CircleParticleEmitter emitter;
+	private SpriteParticleSystem propulsionParticleSystem;
+	private CircleParticleEmitter propulsionEmitter;
 	private CircleParticleEmitter bulletsEmitter;
 	private SpriteParticleSystem bulletsParticleSystem;
 	//Sounds
@@ -152,6 +153,7 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	public Timer bulletsTimer;
 	public Timer enemiesCreationTimer;
 	public Timer heroMovingTimer;
+
 	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -278,11 +280,11 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 
 	private void createCannonButton(){
 		//Fire Button
-				final Sprite fireBtn = new ButtonSprite(CAMERA_WIDTH - 90,CAMERA_HEIGHT - 120, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), cannonBtnHandler);
+				canonBtn = new ButtonSprite(CAMERA_WIDTH - 90,CAMERA_HEIGHT - 120, this.fireButtonTextureRegion, this.getVertexBufferObjectManager(), cannonBtnHandler);
 				 
-				fireBtn.setZIndex(CONTROLS_LAYER);  
-				scene.registerTouchArea(fireBtn);
-				scene.attachChild(fireBtn);
+				canonBtn.setZIndex(CONTROLS_LAYER);  
+				scene.registerTouchArea(canonBtn);
+				scene.attachChild(canonBtn);
 	}
 
 	private void createBg() {
@@ -392,20 +394,20 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 	public void createPropulsionSmoke()
 	{
 		
-		emitter = new CircleParticleEmitter(0, 0, 2);
-		starsParticleSystem = new SpriteParticleSystem(emitter, RATE_MIN, RATE_MAX, PARTICLES_MAX, this.fumacaTextureRegion, this.getVertexBufferObjectManager());
-		starsParticleSystem.addParticleInitializer(new BlendFunctionParticleInitializer<Sprite>(GLES10.GL_SRC_ALPHA, GLES10.GL_ONE));//(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE));
-		starsParticleSystem.addParticleInitializer(new VelocityParticleInitializer<Sprite>(-35, -35, 0, 0));
-		starsParticleSystem.addParticleInitializer(new AccelerationParticleInitializer<Sprite>(5, 0));
+		propulsionEmitter = new CircleParticleEmitter(0, 0, 2);
+		propulsionParticleSystem = new SpriteParticleSystem(propulsionEmitter, RATE_MIN, RATE_MAX, PARTICLES_MAX, this.fumacaTextureRegion, this.getVertexBufferObjectManager());
+		propulsionParticleSystem.addParticleInitializer(new BlendFunctionParticleInitializer<Sprite>(GLES10.GL_SRC_ALPHA, GLES10.GL_ONE));//(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE));
+		propulsionParticleSystem.addParticleInitializer(new VelocityParticleInitializer<Sprite>(-35, -35, 0, 0));
+		propulsionParticleSystem.addParticleInitializer(new AccelerationParticleInitializer<Sprite>(5, 0));
 		//particleSystem.addParticleInitializer(new RotationParticleInitializer<Sprite>(0.0f, 360.0f));
-		starsParticleSystem.addParticleInitializer(new ColorParticleInitializer<Sprite>(Color.WHITE));
-		starsParticleSystem.addParticleInitializer(new ExpireParticleInitializer<Sprite>(1.5f));
+		propulsionParticleSystem.addParticleInitializer(new ColorParticleInitializer<Sprite>(Color.WHITE));
+		propulsionParticleSystem.addParticleInitializer(new ExpireParticleInitializer<Sprite>(1.5f));
 
-		starsParticleSystem.addParticleModifier(new ScaleParticleModifier<Sprite>(0, 5, 0.5f, 2.0f));
+		propulsionParticleSystem.addParticleModifier(new ScaleParticleModifier<Sprite>(0, 5, 0.5f, 2.0f));
 		//particleSystem.addParticleModifier(new ColorParticleModifier<Sprite>(2.5f, 5.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f));
-		starsParticleSystem.addParticleModifier(new AlphaParticleModifier<Sprite>(0f, 1.5f, 1.0f, 0.0f));
+		propulsionParticleSystem.addParticleModifier(new AlphaParticleModifier<Sprite>(0f, 1.5f, 1.0f, 0.0f));
 
-		scene.attachChild(starsParticleSystem);
+		scene.attachChild(propulsionParticleSystem);
 	}
 	
 	public void createBullets()
@@ -434,8 +436,13 @@ public class MainActivity extends SimpleBaseGameActivity  implements IOnMenuItem
 		final AnalogOnScreenControl velocityOnScreenControl = new AnalogOnScreenControl(x1, y1, this.mEngine.getCamera(), this.mOnScreenControlBaseTextureRegion, this.mOnScreenControlKnobTextureRegion, 0.1f, this.getVertexBufferObjectManager(), new IAnalogOnScreenControlListener() {
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
-				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
-				hero.setRotation(MathUtils.radToDeg((float)Math.atan2(pValueX, -pValueY)));
+				if(pValueX != pValueY)
+				{
+					physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
+					hero.setRotation(MathUtils.radToDeg((float)Math.atan2(pValueX, -pValueY)) -90);
+					propulsionEmitter.setCenter(hero.getX(), hero.getY()+8);
+					bulletsEmitter.setCenter(hero.getX(), hero.getY()+8);
+				}
 			}
 
 			@Override
